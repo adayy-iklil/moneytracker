@@ -14,7 +14,8 @@ import java.util.*
 
 class TransactionAdapter(
     private var listTransaksi: List<Transaction> = emptyList(),
-    private val onItemClick: (Transaction) -> Unit = {}
+    private val onItemClick: (Transaction) -> Unit = {},
+    private val onDeleteClick: (Transaction) -> Unit = {}
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     private var filteredList: List<Transaction> = emptyList()
@@ -56,6 +57,7 @@ class TransactionAdapter(
         val tvKategori: TextView = itemView.findViewById(R.id.textKategori)
         val tvTanggal: TextView = itemView.findViewById(R.id.textTanggal)
         val imageIcon: ImageView = itemView.findViewById(R.id.imageIcon)
+        val btnHapus: ImageView = itemView.findViewById(R.id.buttonHapus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
@@ -68,6 +70,7 @@ class TransactionAdapter(
         val item = filteredList[position]
 
         holder.itemView.setOnClickListener { onItemClick(item) }
+        holder.btnHapus.setOnClickListener { onDeleteClick(item) }
 
         holder.tvJudul.text = item.title
         holder.tvKategori.text = item.category

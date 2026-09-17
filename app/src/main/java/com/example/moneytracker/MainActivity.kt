@@ -15,6 +15,7 @@ import com.google.android.material.chip.ChipGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.moneytracker.data.AppDatabase
+import com.example.moneytracker.data.Transaction
 import com.example.moneytracker.data.TransactionRepository
 import com.example.moneytracker.ui.TransactionViewModel
 import com.example.moneytracker.ui.TransactionViewModelFactory
@@ -42,17 +43,22 @@ class MainActivity : AppCompatActivity() {
         val editSearch = findViewById<EditText>(R.id.editSearch)
         val chipGroup = findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupFilter)
 
-        adapter = TransactionAdapter(onItemClick = { transaction ->
-            val intent = Intent(this, AddTransactionActivity::class.java).apply {
-                putExtra("EXTRA_ID", transaction.id)
-                putExtra("EXTRA_TITLE", transaction.title)
-                putExtra("EXTRA_AMOUNT", transaction.amount)
-                putExtra("EXTRA_TYPE", transaction.type)
-                putExtra("EXTRA_CATEGORY", transaction.category)
-                putExtra("EXTRA_DATE", transaction.date)
+        adapter = TransactionAdapter(
+            onItemClick = { transaction ->
+                val intent = Intent(this, AddTransactionActivity::class.java).apply {
+                    putExtra("EXTRA_ID", transaction.id)
+                    putExtra("EXTRA_TITLE", transaction.title)
+                    putExtra("EXTRA_AMOUNT", transaction.amount)
+                    putExtra("EXTRA_TYPE", transaction.type)
+                    putExtra("EXTRA_CATEGORY", transaction.category)
+                    putExtra("EXTRA_DATE", transaction.date)
+                }
+                startActivity(intent)
+            },
+            onDeleteClick = { transaction ->
+                showDeleteConfirmation(transaction)
             }
-            startActivity(intent)
-        })
+        )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
@@ -77,7 +83,12 @@ class MainActivity : AppCompatActivity() {
 
         // Observe data from ViewModel
         viewModel.allTransactions.observe(this) { transactions ->
-            transactions?.let { adapter.setData(it) }
+            transactions?.let { 
+                adapter.setData(it)
+                if (it.isNotEmpty()) {
+                    recyclerView.scrollToPosition(0)
+                }
+            }
         }
         
         val formatRupiah = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
@@ -106,18 +117,9 @@ class MainActivity : AppCompatActivity() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
                 val transaction = adapter.getItemAt(position)
-                
-                androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Hapus Transaksi")
-                    .setMessage("Apakah Anda yakin ingin menghapus transaksi ini?")
-                    .setPositiveButton("Hapus") { _, _ ->
-                        viewModel.delete(transaction)
-                    }
-                    .setNegativeButton("Batal") { _, _ ->
-                        adapter.notifyItemChanged(position)
-                    }
-                    .setCancelable(false)
-                    .show()
+                showDeleteConfirmation(transaction) {
+                    adapter.notifyItemChanged(position)
+                }
             }
         }).attachToRecyclerView(recyclerView)
 
@@ -126,6 +128,20 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, AddTransactionActivity::class.java)
             startActivity(intent)
         }
+    }
+    
+    private fun showDeleteConfirmation(transaction: Transaction, onCancel: () -> Unit = {}) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Hapus Transaksi")
+            .setMessage("Apakah Anda yakin ingin menghapus transaksi ini?")
+            .setPositiveButton("Hapus") { _, _ ->
+                viewModel.delete(transaction)
+            }
+            .setNegativeButton("Batal") { _, _ ->
+                onCancel()
+            }
+            .setCancelable(false)
+            .show()
     }
     
     // updateBalance removed as it is now handled by viewModel.currentBalance observer
